@@ -55,8 +55,8 @@ class Session {
   private _writeConnectionHolder: ConnectionHolder
   private _open: boolean
   private _hasTx: boolean
-  private _bookmarkIn: Bookmark
-  private _bookmarkOut?: string
+  private _currentBookmark: Bookmark
+  private _lastReceivedBookmark: Bookmark
   private _transactionExecutor: TransactionExecutor
   private _impersonatedUser?: string
   private _onComplete: (meta: any) => void
@@ -118,7 +118,8 @@ class Session {
     this._open = true
     this._hasTx = false
     this._impersonatedUser = impersonatedUser
-    this._bookmarkIn = bookmark || Bookmark.empty()
+    this._currentBookmark = bookmark || Bookmark.empty()
+    this._lastReceivedBookmark = Bookmark.empty()
     this._transactionExecutor = _createTransactionExecutor(config)
     this._onComplete = this._onCompleteCallback.bind(this)
     this._databaseNameResolved = this._database !== ''
@@ -151,7 +152,7 @@ class Session {
     return this._run(validatedQuery, params, connection => {
       this._assertSessionIsOpen()
       return (connection as Connection).protocol().run(validatedQuery, params, {
-        bookmark: this._bookmarkIn,
+        bookmark: this._currentBookmark,
         txConfig: autoCommitTxConfig,
         mode: this._mode,
         database: this._database,
@@ -272,7 +273,7 @@ class Session {
       reactive: this._reactive,
       fetchSize: this._fetchSize
     })
-    tx._begin(this._bookmarkIn, txConfig)
+    tx._begin(this._currentBookmark, txConfig)
     return tx
   }
 
@@ -300,7 +301,7 @@ class Session {
    * @return {string | undefined} A reference to a previous transaction if present.
    */
   lastBookmark(): string | undefined {
-    return this._bookmarkOut
+    return this._lastReceivedBookmark.value()
   }
 
   /**
@@ -380,11 +381,9 @@ class Session {
    * @param {string | undefined} newBookmark - The new bookmark.
    * @returns {void}
    */
-  _updateBookmark(newBookmark?: string): void {
-    if (newBookmark !== undefined) {
-      this._bookmarkIn = new Bookmark(newBookmark)
-      this._bookmarkOut = newBookmark
-    }
+  _updateBookmark(newBookmark: Bookmark): void {
+    this._currentBookmark = newBookmark
+    this._lastReceivedBookmark = newBookmark
   }
 
   /**
@@ -416,8 +415,8 @@ class Session {
    * @param {Object} meta Connection metadatada
    * @returns {void}
    */
-  _onCompleteCallback(meta: { bookmark: string }): void {
-    this._updateBookmark(meta.bookmark)
+  _onCompleteCallback(meta: { bookmark: string | string[] }): void {
+    this._updateBookmark(new Bookmark(meta.bookmark))
   }
 
   /**

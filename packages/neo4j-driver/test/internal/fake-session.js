@@ -45,7 +45,7 @@ export default class FakeSession {
   }
 
   withBookmark (bookmark) {
-    this._lastBookmark = bookmark
+    this._currentBookmark = bookmark
     return this
   }
 

@@ -53,6 +53,20 @@ export class Bookmark {
   }
 
   /**
+   * Get book as a string.
+   * 
+   * If there is more than one, the method will return the last one.
+   * 
+   * @return {string|undefined} the last bookmark value.
+   */
+  value(): string | undefined {
+    if (this.isEmpty()) {
+      return undefined
+    }
+    return this._values[this._values.length - 1]
+  }
+
+  /**
    * Get this bookmark as an object for begin transaction call.
    * @return {Object} the value of this bookmark as object.
    */
@@ -79,7 +93,7 @@ const EMPTY_BOOKMARK = new Bookmark(null)
  * @return {string[]} value converted to an array.
  */
 function asStringArray(
-  value?: string | (string | undefined)[] | Array<string | undefined> | null
+  value?: string | string[] | Array<string> | null
 ): string[] {
   if (!value) {
     return []
