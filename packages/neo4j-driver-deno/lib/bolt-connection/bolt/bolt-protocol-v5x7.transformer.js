@@ -15,4 +15,8 @@
  * limitations under the License.
  */
 
-export default "5.28.0" // Specified using --version when running generate.ts
+import v5x6 from './bolt-protocol-v5x6.transformer.js'
+
+export default {
+  ...v5x6
+}
