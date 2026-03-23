@@ -38,8 +38,8 @@ export function RetryableDone () {
   return response('RetryableDone', null)
 }
 
-export function Result ({ id }) {
-  return response('Result', { id })
+export function Result ({ id, keys }) {
+  return response('Result', { id, keys })
 }
 
 export function NullRecord () {

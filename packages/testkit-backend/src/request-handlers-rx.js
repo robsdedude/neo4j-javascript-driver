@@ -114,6 +114,19 @@ export function SessionRun (_, context, data, wire) {
     return
   }
 
+  let rxKeys
+
+  rxResult
+    .keys()
+    .subscribe({
+      error: error => {
+        rxKeys = { error }
+      },
+      next: keys => {
+        rxKeys = { keys }
+      }
+    })
+
   rxResult
     ._toObservable()
     .subscribe({
@@ -123,8 +136,23 @@ export function SessionRun (_, context, data, wire) {
 
         const id = context.addResult(result)
 
-        wire.writeResponse(responses.Result({ id }))
-      }
+        // `peek` is a workaround to make the driver fetch the response to the RUN message.
+        // Using `rxResult.keys()` instead leads to the driver complaining about consuming the
+        // result twice. Further investigation is needed.
+        result.recordIt = result[Symbol.asyncIterator]()
+        result
+          .recordIt
+          .peek()
+          .catch(_ => {})
+          .finally(_ => {
+            if (rxKeys.error) {
+              wire.writeError(rxKeys.error)
+            } else {
+              rxKeys = rxKeys.keys
+              wire.writeResponse(responses.Result({ id, keys: rxKeys }))
+            }
+          })
+      },
     })
 }
 
@@ -169,7 +197,22 @@ export function TransactionRun (_, context, data, wire) {
     }
   }
 
-  tx.tx.run(cypher, params)
+  const rxResult = tx.tx.run(cypher, params)
+
+  let rxKeys
+
+  rxResult
+    .keys()
+    .subscribe({
+      error: error => {
+        rxKeys = { error }
+      },
+      next: keys => {
+        rxKeys = { keys }
+      }
+    })
+
+  rxResult
     ._toObservable()
     .subscribe({
       error: e => wire.writeError(e),
@@ -178,8 +221,23 @@ export function TransactionRun (_, context, data, wire) {
 
         const id = context.addResult(result)
 
-        wire.writeResponse(responses.Result({ id }))
-      }
+        // `peek` is a workaround to make the driver fetch the response to the RUN message.
+        // Using `rxResult.keys()` instead leads to the driver complaining about consuming the
+        // result twice. Further investigation is needed.
+        result.recordIt = result[Symbol.asyncIterator]()
+        result
+          .recordIt
+          .peek()
+          .catch(_ => {})
+          .finally(_ => {
+            if (rxKeys.error) {
+              wire.writeError(rxKeys.error)
+            } else {
+              rxKeys = rxKeys.keys
+              wire.writeResponse(responses.Result({ id, keys: rxKeys }))
+            }
+          })
+      },
     })
 }
 
@@ -358,6 +416,12 @@ function toAsyncIterator (result) {
       state.finished = true
       state.summary = value
       return { done: true, value }
-    }
+    },
+    peek: async () => {
+      if (state.finished) {
+        return { done: true }
+      }
+      return await observer.head()
+    },
   }
 }

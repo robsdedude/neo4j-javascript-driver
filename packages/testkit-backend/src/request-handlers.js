@@ -197,9 +197,12 @@ export function SessionRun (_, context, data, wire) {
     return
   }
 
-  const id = context.addResult(result)
-
-  wire.writeResponse(responses.Result({ id }))
+  return result
+    .keys()
+    .then((keys) => {
+      wire.writeResponse(responses.Result({ id, keys }))
+    })
+    .catch(err => wire.writeError(err))
 }
 
 export function ResultNext (_, context, data, wire) {
@@ -289,7 +292,12 @@ export function TransactionRun (_, context, data, wire) {
   const result = tx.tx.run(cypher, params)
   const id = context.addResult(result)
 
-  wire.writeResponse(responses.Result({ id }))
+  return result
+    .keys()
+    .then((keys) => {
+      wire.writeResponse(responses.Result({ id, keys }))
+    })
+    .catch(err => wire.writeError(err))
 }
 
 export function RetryablePositive (_, context, data, wire) {
